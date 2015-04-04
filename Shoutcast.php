@@ -239,12 +239,11 @@ class Shoutcast
     * Get the xml feed etc
     * @return bool
     */
-   private function _curl($url, $xml = true)
+private function _curl($url, $xml = true)
    {
       $ret = false;
       $this->_status = false;
       $this->_error = false;
-
       $ch = curl_init();
       if (is_resource($ch)) {
          curl_setopt($ch, CURLOPT_URL, $url);
@@ -252,25 +251,29 @@ class Shoutcast
          curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13)');
          curl_setopt($ch, CURLOPT_TIMEOUT, 5);
          $data = curl_exec($ch);
+         $info = curl_getinfo($ch);
          curl_close($ch);
-
-         if ($data) {
-
-            if ($xml === true) {
-               $this->_xml = @simplexml_load_string($data);
-               if ($this->_xml instanceof \SimpleXMLElement && $this->_xml->getName() == 'SHOUTCASTSERVER') {
-                  $this->_status = true;
-                  $ret = true;
-               } else {
-                  $this->_error = 'Not SHOUTcast';
-               }
-            } else {
-               $this->_status = true;
-               $ret = $data;
-            }
+         if($info['http_code'] == 200){
+           if ($data) {
+              if ($xml === true) {
+                 $this->_xml = @simplexml_load_string($data);
+                 if ($this->_xml instanceof \SimpleXMLElement && $this->_xml->getName() == 'SHOUTCASTSERVER') {
+                    $this->_status = true;
+                    $ret = true;
+                 } else {
+                    $this->_error = 'Not SHOUTcast';
+                 }
+              } else {
+                 $this->_status = true;
+                 $ret = $data;
+              }
+           } else {
+              $this->_error = 'Failed to connect';
+           }
          } else {
-            $this->_error = 'Failed to connect';
-         }
+              $http_codes = parse_ini_file('httpcodes.ini.php');
+              $this->_error = $info['http_code'] . ' ' . $http_codes[$info['http_code']];
+            }
       } else {
          $this->_error = 'cURL is not a resource';
       }
